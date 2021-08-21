@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="./jquery.min.js"></script>
+    <script src="./jquery.json-viewer.js"></script>
+    <link rel="stylesheet" href="./jquery.json-viewer.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            border: none;
+            -webkit-font-smoothing: antialiased;
+            white-space: normal;
+            word-wrap: break-all;
+        }
+
+        *,
+        *:before,
+        *:after {
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            -ms-box-sizing: border-box;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0)
+        }
+
+        body {
+            padding: 1rem 1rem;
+        }
+
+        .section>ul {
+            display: block;
+            list-style-type: none;
+            margin-block-start: 0.5rem;
+            margin-block-end: 0rem;
+            margin-inline-start: 0px;
+            margin-inline-end: 0px;
+            padding-inline-start: 1rem;
+        }
+
+        .section>ul li {
+            align-items: center;
+            font-weight: bold;
+            margin-block-end: 0.25em;
+        }
+
+        .section>ul li .key {
+            flex-shrink: 0;
+            flex-grow: 0;
+            font-weight: bold;
+        }
+
+        .section>ul li .value {
+            padding-inline-start: 0.5rem;
+            flex-grow: 1;
+            font-weight: normal;
+        }
+
+        .section {
+            white-space: normal;
+            word-wrap: break-word;
+            background: var(--vscode-editorWidget-background);
+            margin-block-end: 1.4rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .section .title {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+
+        .json-dict {
+            white-space: normal;
+            word-wrap: break-all;
+        }
+
+        .json-document {
+            padding: 0;
+        }
+    </style>
+    <script>
+        window.addEventListener('message', event => {
+            console.log('Webview接收到的消息：', event);
+
+            $('#request-header').empty();
+            $('#request-body').empty();
+            $('#response-header').empty();
+            $('#response-body').empty();
+
+            if (event.data.request != null) {
+                let networkTask = event.data.request;
+
+                $('#original').html(JSON.stringify(networkTask));
+
+                if (networkTask != null) {
+                    $('#url').html(networkTask.uri);
+                    $('#method').html(networkTask.method);
+                }
+                if (networkTask != null && networkTask.request != null) {
+                    $('#request-header').empty();
+                    $('#statusCode').html(networkTask.response.statusCode);
+                    $('#remoteAddress').html(networkTask.response.connectionInfo.remoteAddress + ':' + networkTask.response.connectionInfo.remotePort);
+                    Object.keys(networkTask.request.headers).forEach(e => {
+                        $('#request-header').append(`<li><span class="key">${e}:</span><span class="value">${networkTask.request.headers[e]}</span></li>`);
+                    });
+                }
+                if (networkTask != null && networkTask.requestBody != null) {
+                    const data = networkTask.requestBody;
+                    const hexs = data.map(e => (e <= 127 && e != 37) ? String.fromCharCode(e) : `%${e.toString(16)}`);
+                    const result = decodeURIComponent(hexs.join(''));
+                    try {
+                        const json = JSON.parse(result);
+                        $('#request-body').jsonViewer(json, { withQuotes: true });
+                    } catch (error) {
+                        $('#request-body').html(result);
+                    }
+                }
+                if (networkTask != null && networkTask.response != null) {
+                    $('#response-header').empty();
+                    Object.keys(networkTask.response.headers).forEach(e => {
+                        $('#response-header').append(`<li><span class="key">${e}:</span><span class="value">${networkTask.response.headers[e].join(', ')}</span></li>`);
+                    });
+                }
+                if (networkTask != null && networkTask.responseBody != null) {
+                    const data = networkTask.responseBody;
+                    const hexs = data.map(e => (e <= 127 && e != 37) ? String.fromCharCode(e) : `%${e.toString(16)}`);
+                    const result = decodeURIComponent(hexs.join(''));
+                    try {
+                        const json = JSON.parse(result);
+                        $('#response-body').jsonViewer(json, { withQuotes: true });
+                    } catch (error) {
+                        $('#response-body').html(result);
+                    }
+                }
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <div class="section">
+        <div class="title">General</div>
+        <ul id="general">
+            <li><span class="key">Request URL:</span><span class="value" id="url">https://www.exampel.com</span></li>
+            <li><span class="key">Request Method:</span><span class="value" id="method">GET</span></li>
+            <li><span class="key">Status Code:</span><span class="value" id="statusCode">200</span>
+            </li>
+            <li><span class="key">Remote Address:</span><span class="value" id="remoteAddress">127.0.01</span>
+            </li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <div class="title">Request Header</div>
+        <ul id="request-header"></ul>
+    </div>
+
+    <div class="section">
+        <div class="title">Request Body</div>
+        <ul>
+            <li><span class="value" id="request-body"></span>
+        </ul>
+    </div>
+
+    <div class="section">
+        <div class="title">Response Header</div>
+        <ul id="response-header"></ul>
+    </div>
+
+    <div class="section">
+        <div class="title">Response Body</div>
+        <ul id="response-body" style="display: block;"></ul>
+    </div>
+
+    <div class="section" style="display: none;" id="original">
+    </div>
+
+</body>
+
+</html>
